@@ -146,7 +146,10 @@ its contents initialized to zero.  Freeing is up to you!"
   (etypecase type
     (keyword
      (cffi-sys:%mem-ref (c-aptr wrapper index type) type))
-    (t (wrap-pointer (c-aptr wrapper index type) type wrapper))))
+    (t (let ((basic-type (basic-foreign-type type)))
+         (if basic-type
+             (cffi-sys:%mem-ref (c-aptr wrapper index type) basic-type)
+             (wrap-pointer (c-aptr wrapper index type) type wrapper))))))
 
 (define-compiler-macro c-aref (&whole whole wrapper index
                                       &optional type)
@@ -155,7 +158,10 @@ its contents initialized to zero.  Freeing is up to you!"
         (keyword
          `(cffi-sys:%mem-ref (c-aptr ,wrapper ,index ,type) ,type))
         (t (once-only (wrapper)
-             `(wrap-pointer (c-aptr ,wrapper ,index ,type) ,type ,wrapper))))
+             (let ((basic-type (basic-foreign-type type)))
+               (if basic-type
+                   `(cffi-sys:%mem-ref (c-aptr ,wrapper ,index ,type) ,basic-type)
+                   `(wrap-pointer (c-aptr ,wrapper ,index ,type) ,type ,wrapper))))))
       whole))
 
 (defun (setf c-aref) (v ptr index type)
