@@ -162,7 +162,12 @@ its contents initialized to zero.  Freeing is up to you!"
   (etypecase type
     (keyword
      (cffi-sys:%mem-set v (c-aptr ptr index type) type)
-     v)))
+     v)
+    (symbol
+     (let* ((basic-type (basic-foreign-type type)))
+       (assert basic-type nil "type is not basic type ~S" type)
+       (cffi-sys:%mem-set v (c-aptr ptr index basic-type) basic-type)
+       v))))
 
 (define-compiler-macro (setf c-aref) (&whole whole v ptr index type)
   (if (constantp type)
@@ -170,7 +175,13 @@ its contents initialized to zero.  Freeing is up to you!"
         (keyword (once-only (v)
                    `(progn
                       (cffi-sys:%mem-set ,v (c-aptr ,ptr ,index ,type) ,type)
-                      ,v))))
+                      ,v)))
+        (symbol (let ((basic-type (basic-foreign-type (eval type))))
+                  (assert basic-type nil "type is not basic type ~S" type)
+                  (once-only (v)
+                    `(progn
+                       (cffi-sys:%mem-set ,v (c-aptr ,ptr ,index ,basic-type) ,basic-type)
+                       ,v)))))
       whole))
 
 (defun memcpy (dest src &key (n 1) type)
